@@ -1,97 +1,65 @@
-/*
-* FILENAME:	MAX5419.cpp
-* AUTHOR:	Rohit Srivastava
-* EMAIL:	srivas29@purdue.edu
-* VERSION:	0.0
+/*sample write sketch
+#include <MAX5419.h>
+#include <Wire.h>
 
-* DISCLAIMER
-* This code is in the public domain. Please feel free to use, modify, distribute,
-* etc. as needed, but please give reference to original author as a courtesy to
-* open source developing/-ers.
-*
-* If you find any bugs in the code, or have any questions, please feel free to
-* contact me.
+MAX5419 D1(0x28);
 
+void setup() {
+  // put your setup code here, to run once:
+  Wire.begin();
+}
 
+void loop() {
+  // put your main code here, to run repeatedly:
+  D1.write(254);
+}
 */
 
 
 #include "MAX5419.h"
 
-/** Default constructor, uses default I2C address.
- * @see MAX5419_DEFAULT_ADDRESS
- */
-MAX5419::MAX5419() {
-    devAddr = MAX5419_DEFAULT_ADDRESS;
+#define MAX5419_VREG 		0x11
+#define MAX5419_NVREG		0x21
+#define MAX5419_NVREGxVREG  0x61
+#define MAX5419_VREGxNVREG  0x51
+
+
+MAX5419::MAX5419(const uint8_t address)
+{
+	_address = address;
 }
 
-/** Specific address constructor.
- * @param address I2C address
- * @see MAX5419_DEFAULT_ADDRESS
- * @see MAX5419_ADDRESS_A0_GND
- * @see MAX5419_ADDRESS_A0_VCC
- */
-MAX5419::MAX5419(uint8_t address) {
-    devAddr = address;
+uint8_t MAX5419::write(const uint8_t value)  //Standard write command
+{
+	uint8_t loc = MAX5419_VREG;
+    return send(loc, value);
 }
 
-void MAX5419::begin() {
-  setWiper(MAX5419_WIPER_MID);	// set to mid scale
+uint8_t MAX5419::writeNonvolatile(const uint8_t value) //Write to nonvolatile memory
+{
+	uint8_t loc = MAX5419_NVREG;
+    return send(loc, value);
 }
 
-/** Verify the I2C connection.
- * Make sure the device is connected and responds as expected.
- * @return True if connection is valid, false otherwise
- */
-bool MAX5419::testConnection() {
-    Wire.beginTransmission(devAddr);
-    return (Wire.endTransmission() == 0);
+uint8_t MAX5419::switchNVtoV()  //Switch from NV to V
+{
+	uint8_t loc = MAX5419_NVREGxVREG;
+	uint8_t value = 0x00;
+    return send(loc, value);
 }
 
-/** Set Wiper value
- * valid range is 0x000 = B to 0x100 = A
- * setting wiper in the range 0x101 to 0x3FF will lock wiper at A w/ inc & dec disabled
- */
-bool MAX5419::setWiper(uint16_t value) {
-  Wire.beginTransmission(devAddr);
-  uint8_t temp = ((value >> 8 & 0x01) | MAX5419_CMD_WRITE);
-  Wire.write(temp);
-  temp = (value & 0xFF);
-  Wire.write(temp);
-  return (Wire.endTransmission() == 0);
+uint8_t MAX5419::switchVtoNV() //Switch from V to NV
+{
+	uint8_t loc = MAX5419_VREGxNVREG;
+	uint8_t value = 0x00;
+    return send(loc, value);
 }
- 
-/** Increment Wiper value (one step closer to A)
- * will not increment past 0x100
- */
-bool MAX5419::incWiper() {
-  Wire.beginTransmission(devAddr);
-  Wire.write(MAX5419_CMD_INC);
-  return (Wire.endTransmission() == 0);
-}
- 
-/** Decrement Wiper value (one step closer to B)
- * will not decrement past 0x000
- */
-bool MAX5419::decWiper() {
-  Wire.beginTransmission(devAddr);
-  Wire.write(MAX5419_CMD_DEC);
-  return (Wire.endTransmission() == 0);
-}
- 
-/** Read Wiper value
- */
-int16_t MAX5419::getWiper() {
-  Wire.beginTransmission(devAddr);
-  Wire.write(MAX5419_CMD_READ);
-  if(Wire.endTransmission() == 0) {
-    if(Wire.requestFrom(devAddr, (uint8_t) 2) == 2) {
-      buffer = Wire.read();
-      buffer <<= 8;
-      buffer |= Wire.read();
-      return buffer;
-    }
-    else return -1;
-  }
-  else return -1;
+
+
+uint8_t MAX5419::send(const uint8_t loc, const uint8_t value)  //send function
+{
+    Wire.beginTransmission(_address);
+    Wire.write(loc);
+    Wire.write(value);
+    return Wire.endTransmission();
 }
