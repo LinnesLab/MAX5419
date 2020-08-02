@@ -1,1 +1,2 @@
-MAX5419 Arduino Library
+DEPRECATED LIBRARY
+Please use this library instead: https://github.com/LinnesLab/MAX541X
